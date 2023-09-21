@@ -1,0 +1,45 @@
+name: Trigger auto deployment for web-app
+
+# When this action will be executed
+on:
+  # Automatically trigger it when detected changes in repo
+  push:
+    branches: 
+      [ master ]
+    paths:
+    - '**'
+    - '.github/workflows/web-app-AutoDeployTrigger-38ce77ce-5305-440f-9200-3c4146e5b2a9.yml'
+
+  # Allow manual trigger 
+  workflow_dispatch:      
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions: 
+      id-token: write #This is required for requesting the OIDC JWT Token
+
+    steps:
+      - name: Checkout to the branch
+        uses: actions/checkout@v2
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.WEBAPP_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.WEBAPP_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.WEBAPP_AZURE_SUBSCRIPTION_ID }}
+
+      - name: Build and push container image to registry
+        uses: azure/container-apps-deploy-action@v1
+        with:
+          appSourcePath: ${{ github.workspace }} 
+          registryUrl: magrousseaurepo.azurecr.io
+          registryUsername: ${{ secrets.WEBAPP_REGISTRY_USERNAME }}
+          registryPassword: ${{ secrets.WEBAPP_REGISTRY_PASSWORD }}
+          containerAppName: web-app
+          resourceGroup: devops
+          imageToBuild: magrousseaurepo.azurecr.io/web-app:${{ github.sha }}
+          dockerfilePath: Dockerfile
+
+
